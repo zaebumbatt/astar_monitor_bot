@@ -15,6 +15,7 @@ jobs:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USER }}
           key: ${{ secrets.PASSWORD }}
+          command_timeout: 30m
           script: |
             cd astar_monitor_bot
             docker compose down
