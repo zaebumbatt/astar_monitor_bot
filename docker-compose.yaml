@@ -1,14 +1,16 @@
 version: '3.8'
 services:
-  app:
+  web:
     build: .
     command: >
-      sh -c "python manage.py migrate && 
-             python manage.py runserver 0.0.0.0:8000"
+      sh -c "python manage.py migrate --noinput &&
+             python manage.py collectstatic --no-input &&
+             gunicorn core.wsgi:application --workers 3 --bind 0.0.0.0:8000"
     volumes:
       - .:/app
-    ports:
-      - "8000:8000"
+      - static_volume:/app/static_files
+    expose:
+      - 8000
     depends_on:
       - db
       - redis
@@ -32,7 +34,17 @@ services:
       - .:/app
     depends_on:
       - redis
+  nginx:
+    build: ./nginx
+    volumes:
+      - static_volume:/app/static_files
+    ports:
+      - "1337:80"
+    depends_on:
+      - web
 
 volumes:
   db:
+    driver: local
+  static_volume:
     driver: local
