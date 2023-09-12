@@ -70,4 +70,4 @@ def create_new_dapp_message(dapp: Dapp) -> str:
 
 def send_message(message: str) -> BOT:
     logger.info(f'send_message: {message}')
-    # return BOT.send_message(chat_id=CHAT_ID, text=message, parse_mode='HTML')
+    return BOT.send_message(chat_id=CHAT_ID, text=message, parse_mode='HTML')
