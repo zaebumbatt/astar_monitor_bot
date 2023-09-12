@@ -1,0 +1,22 @@
+name: astar_monitor_workflow
+
+on:
+  push:
+    branches:
+      - "main"
+
+jobs:
+  clone_and_run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: pull and run
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USER }}
+          key: ${{ secrets.PASSWORD }}
+          script: |
+            cd astar_monitor_bot
+            docker compose down
+            git pull
+            docker compose up --build -d
