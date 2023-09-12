@@ -18,6 +18,10 @@ services:
     image: postgres:15.4
     volumes:
       - db:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
   redis:
     image: redis:alpine
   celery:
