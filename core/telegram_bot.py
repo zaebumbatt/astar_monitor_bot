@@ -1,14 +1,14 @@
 import os
 
-import telegram
+import requests
 from celery.utils.log import get_task_logger
 
 from monitor.models import Account, Dapp
 
 logger = get_task_logger(__name__)
 
+TOKEN = os.getenv('TELEGRAM_TOKEN')
 CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
-BOT = telegram.Bot(token=os.getenv('TELEGRAM_TOKEN'))
 
 
 def create_transfer_message(
@@ -66,6 +66,16 @@ def create_new_dapp_message(dapp: Dapp) -> str:
     return f'New dapp has been added: {dapp.portal_link}\n'
 
 
-def send_message(message: str) -> BOT:
+def send_message(message: str) -> None:
     logger.info(f'send_message: {message}')
-    return BOT.send_message(chat_id=CHAT_ID, text=message, parse_mode='HTML')
+    url = f'https://api.telegram.org/bot{TOKEN}/sendMessage'
+    data = {
+        'chat_id': CHAT_ID,
+        'text': message,
+        'parse_mode': 'HTML',
+    }
+
+    response = requests.post(url, json=data)
+    logger.info(f'send_message: {response.status_code}')
+    if response.status_code != 200:
+        logger.info(f'send_message: {response.text}')
