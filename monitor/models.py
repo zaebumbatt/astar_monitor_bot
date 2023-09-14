@@ -39,7 +39,7 @@ class Dapp(core_models.TimeTrackable):
 
     @property
     def portal_link(self) -> str:
-        url = f'https://portal.astar.network/astar/dapp-staking/dapp?dapp='
+        url = 'https://portal.astar.network/astar/dapp-staking/dapp?dapp='
         return f"<a href='{url}{self.account.address}'>{self.name}</a>"
 
     def __str__(self):

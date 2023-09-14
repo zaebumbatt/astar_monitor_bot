@@ -4,7 +4,6 @@ import os
 import requests
 from celery import shared_task
 from celery.utils.log import get_task_logger
-from dotenv import load_dotenv
 
 from core.subscan import make_request
 from core.telegram_bot import (create_extrinsic_message,
@@ -12,9 +11,7 @@ from core.telegram_bot import (create_extrinsic_message,
                                create_transfer_message, send_message)
 from monitor.models import Account, Dapp, Transfer
 
-load_dotenv()
 logger = get_task_logger(__name__)
-
 
 TRANSFER_LOWER_LIMIT = int(os.getenv('TRANSFER_LOWER_LIMIT', 1000000))
 
@@ -24,7 +21,7 @@ def get_latest_transfers() -> None:
     data = {'row': 100, 'page': 0}
     response = make_request('transfers', data)
     if not response:
-        logger.info(f'make_request has failed')
+        logger.info('make_request has failed')
         return
 
     for transfer in reversed(response['data']['transfers']):
@@ -41,13 +38,17 @@ def get_latest_transfers() -> None:
         from_account, _ = Account.objects.get_or_create(
             address=transfer.get('from'),
             defaults={
-                'display': transfer.get('from_account_display', {}).get('display', ''),
+                'display': transfer.get(
+                    'from_account_display', {}
+                ).get('display', ''),
             }
         )
         to_account, _ = Account.objects.get_or_create(
             address=transfer.get('to'),
             defaults={
-                'display': transfer.get('to_address_display', {}).get('display', ''),
+                'display': transfer.get(
+                    'to_address_display', {}
+                ).get('display', ''),
             }
         )
         _, created = Transfer.objects.get_or_create(
@@ -83,7 +84,7 @@ def get_latest_dapp_staking() -> None:
     }
     response = make_request('extrinsics', data)
     if not response:
-        logger.info(f'get_latest_dapp_staking has failed')
+        logger.info('get_latest_dapp_staking has failed')
         return
 
     for transaction in reversed(response['data']['extrinsics']):
@@ -176,13 +177,14 @@ def check_new_dapps() -> None:
 
 @shared_task
 def get_account_balances() -> None:
-    known_addresses = Account.objects.exclude(name='').values_list('address', flat=True)
+    known_addresses = (Account.objects.exclude(name='')
+                       .values_list('address', flat=True))
     max_addresses_per_request = 100
     for i in range(0, len(known_addresses), max_addresses_per_request):
         data = {'address': known_addresses[i:i + max_addresses_per_request]}
         response = make_request('accounts', data)
         if not response:
-            logger.info(f'get_account_balances has failed')
+            logger.info('get_account_balances has failed')
             continue
 
         for row in response['data']['list']:
@@ -206,7 +208,7 @@ def get_top_holders() -> None:
     }
     response = make_request('accounts', data)
     if not response:
-        logger.info(f'get_top_holders has failed')
+        logger.info('get_top_holders has failed')
         return
     for row in response['data']['list']:
         address = row.get('address')

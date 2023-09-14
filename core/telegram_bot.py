@@ -2,11 +2,9 @@ import os
 
 import telegram
 from celery.utils.log import get_task_logger
-from dotenv import load_dotenv
 
 from monitor.models import Account, Dapp
 
-load_dotenv()
 logger = get_task_logger(__name__)
 
 CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
