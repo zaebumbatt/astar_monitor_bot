@@ -236,9 +236,10 @@ def get_top_holders() -> None:
 
 @shared_task
 def get_latest_ton_transfers() -> None:
-    accounts = TONAccount.objects.all().values_list('name', 'address')
-    logger.info(f'{accounts=}')
+    accounts = TONAccount.objects.all().values_list('name', 'address_raw')
     for name, address in accounts:
+        if not address:
+            continue
         time.sleep(1)  # rps limit
         response = make_tonapi_request(f'blockchain/accounts/{address}/transactions')
         if not response:

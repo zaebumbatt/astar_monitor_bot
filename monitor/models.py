@@ -1,6 +1,7 @@
 from django.db import models
 
 from core import models as core_models
+from core.tonapi import make_tonapi_request
 
 
 class Account(core_models.TimeTrackable):
@@ -86,6 +87,12 @@ class Transfer(core_models.TimeTrackable):
 class TONAccount(core_models.TimeTrackable):
     name = models.CharField(max_length=100, blank=True, default='')
     address = models.CharField(max_length=100, unique=True)
+    address_raw = models.CharField(max_length=100, unique=True, blank=True)
+
+    def save(self, *args, **kwargs):
+        address_info = make_tonapi_request(f'address/{self.address}/parse')
+        self.address_raw = address_info.get('raw_form', '') if address_info else ''
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.name or self.address
