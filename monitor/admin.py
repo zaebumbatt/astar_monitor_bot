@@ -35,4 +35,7 @@ class TransferAdmin(admin.ModelAdmin):
 
 @admin.register(monitor_models.TONAccount)
 class TONAccountAdmin(admin.ModelAdmin):
+    readonly_fields = (
+        'address_raw',
+    )
     search_fields = ['address']
