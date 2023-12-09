@@ -1,5 +1,6 @@
 import json
 import os
+import time
 
 import requests
 from celery import shared_task
@@ -8,12 +9,18 @@ from celery.utils.log import get_task_logger
 from core.subscan import make_request
 from core.telegram_bot import (create_extrinsic_message,
                                create_new_dapp_message,
+                               create_ton_transfer_message,
                                create_transfer_message, send_message)
-from monitor.models import Account, Dapp, Transfer
+from core.tonapi import make_tonapi_request
+from monitor.models import Account, Dapp, TONAccount, TONTransfer, Transfer
 
 logger = get_task_logger(__name__)
 
-TRANSFER_LOWER_LIMIT = int(os.getenv('TRANSFER_LOWER_LIMIT', 1000000))
+
+ASTAR_CHAT_ID = os.getenv('TELEGRAM_ASTAR_CHAT_ID')
+TON_CHAT_ID = os.getenv('TELEGRAM_TON_CHAT_ID')
+ASTAR_TRANSFER_LOWER_LIMIT = int(os.getenv('ASTAR_TRANSFER_LOWER_LIMIT', 1000000))
+TON_TRANSFER_LOWER_LIMIT = int(os.getenv('TON_TRANSFER_LOWER_LIMIT', 10000))
 
 
 @shared_task
@@ -31,7 +38,7 @@ def get_latest_transfers() -> None:
 
         if (
             not transfer.get('success')
-            or float(amount) < TRANSFER_LOWER_LIMIT
+            or float(amount) < ASTAR_TRANSFER_LOWER_LIMIT
         ):
             continue
 
@@ -65,6 +72,7 @@ def get_latest_transfers() -> None:
 
         if created:
             send_message(
+                ASTAR_CHAT_ID,
                 create_transfer_message(
                     from_account,
                     to_account,
@@ -118,7 +126,7 @@ def get_latest_dapp_staking() -> None:
             if param.get('type_name') == 'Balance':
                 amount = int(param.get('value', 0)) / 10 ** 18
 
-                if float(amount) >= TRANSFER_LOWER_LIMIT:
+                if float(amount) >= ASTAR_TRANSFER_LOWER_LIMIT:
                     account_address = transaction.get('account_id')
 
         if account_address and dapp_address:
@@ -143,6 +151,7 @@ def get_latest_dapp_staking() -> None:
 
             if created:
                 send_message(
+                    ASTAR_CHAT_ID,
                     create_extrinsic_message(
                         account,
                         dapp,
@@ -172,7 +181,7 @@ def check_new_dapps() -> None:
                 name=row.get('name'),
                 account=account,
             )
-            send_message(create_new_dapp_message(dapp))
+            send_message(ASTAR_CHAT_ID, create_new_dapp_message(dapp))
 
 
 @shared_task
@@ -223,3 +232,56 @@ def get_top_holders() -> None:
                 'balance_lock': float(row['balance_lock']),
             }
         )
+
+
+@shared_task
+def get_latest_ton_transfers() -> None:
+    accounts = TONAccount.objects.all().values_list('name', 'address')
+    logger.info(f'{accounts=}')
+    for name, address in accounts:
+        time.sleep(1)  # rps limit
+        response = make_tonapi_request(f'blockchain/accounts/{address}/transactions')
+        if not response:
+            logger.info('make_tonapi_request has failed')
+            return
+        transactions = response.get('transactions')
+        if transactions is None:
+            logger.info('no transactions in response')
+            return
+        for transaction in transactions:
+            in_msg = transaction.get('in_msg')
+            if in_msg is None:
+                continue
+            value = in_msg.get('value')
+            source = in_msg.get('source')
+            destination = in_msg.get('destination')
+            if value is None or source is None or destination is None:
+                continue
+
+            amount = value / 10 ** 9
+            if float(amount) < TON_TRANSFER_LOWER_LIMIT:
+                continue
+
+            source_address = source.get('address')
+            source_name = name if source_address == address else source.get('name')
+            destination_address = destination.get('address')
+            destination_name = name if destination_address == address else destination.get('name')
+            _, created = TONTransfer.objects.get_or_create(
+                hash=transaction.get('hash'),
+                defaults={
+                    'source_address': source.get('address'),
+                    'destination_address': destination.get('address'),
+                    'amount': amount,
+                },
+            )
+            if created:
+                send_message(
+                    TON_CHAT_ID,
+                    create_ton_transfer_message(
+                        source_address,
+                        source_name,
+                        destination_address,
+                        destination_name,
+                        amount,
+                    )
+                )

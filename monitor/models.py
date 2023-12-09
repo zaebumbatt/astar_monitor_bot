@@ -81,3 +81,33 @@ class Transfer(core_models.TimeTrackable):
         verbose_name = 'Transfer'
         verbose_name_plural = 'Transfers'
         ordering = ['-created_at']
+
+
+class TONAccount(core_models.TimeTrackable):
+    name = models.CharField(max_length=100, blank=True, default='')
+    address = models.CharField(max_length=100, unique=True)
+
+    def __str__(self):
+        return self.name or self.address
+
+    class Meta:
+        db_table = 'ton_account'
+        verbose_name = 'TONAccount'
+        verbose_name_plural = 'TONAccounts'
+        ordering = ['name']
+
+
+class TONTransfer(core_models.TimeTrackable):
+    hash = models.CharField(max_length=100, unique=True)
+    source_address = models.CharField(max_length=100)
+    destination_address = models.CharField(max_length=100)
+    amount = models.DecimalField(max_digits=30, decimal_places=5, default=0.0)
+
+    def __str__(self):
+        return self.hash
+
+    class Meta:
+        db_table = 'ton_transfer'
+        verbose_name = 'TONTransfer'
+        verbose_name_plural = 'TONTransfers'
+        ordering = ['-created_at']

@@ -8,7 +8,6 @@ from monitor.models import Account, Dapp
 logger = get_task_logger(__name__)
 
 TOKEN = os.getenv('TELEGRAM_TOKEN')
-CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 
 
 def create_transfer_message(
@@ -66,11 +65,33 @@ def create_new_dapp_message(dapp: Dapp) -> str:
     return f'New dapp has been added: {dapp.portal_link}\n'
 
 
-def send_message(message: str) -> None:
+def create_ton_transfer_message(
+        source_address: str,
+        source_name: str,
+        destination_address: str,
+        destination_name: str,
+        amount: str,
+    ) -> str:
+
+    def tonviewer_link(address, name) -> str:
+        url = 'https://tonviewer.com/'
+        return f"<a href='{url}{address}'>{name}</a>"
+
+    sender = tonviewer_link(source_address, source_name or source_address)
+    receiver = tonviewer_link(destination_address, destination_name or destination_address)
+    asset_symbol = 'TON'
+    return (
+        f'Sender: {sender}\n'
+        f'Receiver: {receiver}\n'
+        f'Amount: {amount:,.2f} {asset_symbol}\n'
+    )
+
+
+def send_message(chat_id: str, message: str) -> None:
     logger.info(f'send_message: {message}')
     url = f'https://api.telegram.org/bot{TOKEN}/sendMessage'
     data = {
-        'chat_id': CHAT_ID,
+        'chat_id': chat_id,
         'text': message,
         'parse_mode': 'HTML',
     }

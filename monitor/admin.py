@@ -31,3 +31,8 @@ class TransferAdmin(admin.ModelAdmin):
         'module',
         'amount',
     )
+
+
+@admin.register(monitor_models.TONAccount)
+class TONAccountAdmin(admin.ModelAdmin):
+    search_fields = ['address']
